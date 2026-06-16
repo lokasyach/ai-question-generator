@@ -32,8 +32,9 @@ app.add_middleware(
 init_db()
 
 # Include routers
-from routers import auth
+from routers import auth, upload
 app.include_router(auth.router)
+app.include_router(upload.router)
 
 @app.get("/")
 async def root():
