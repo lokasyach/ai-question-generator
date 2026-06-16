@@ -2,7 +2,7 @@ from transformers import T5Tokenizer, T5ForConditionalGeneration
 import torch
 
 # Load model once when the app starts (not on every request)
-MODEL_NAME = "google/flan-t5-base"
+MODEL_NAME = "lokasya/flan-t5-question-generator"
 
 print("Loading AI model... this may take a minute on first run.")
 tokenizer = T5Tokenizer.from_pretrained(MODEL_NAME)
