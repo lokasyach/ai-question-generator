@@ -37,25 +37,41 @@ def clean_text(text: str) -> str:
     text = text.strip()
     return text
 
-def split_into_paragraphs(text: str, min_length: int = 100) -> list:
-    """Split text into meaningful paragraphs"""
-    # Split by newlines or double spaces
+def split_into_paragraphs(text: str, min_length: int = 100, max_length: int = 600) -> list:
+    """Split text into meaningful chunks, even if there are no clear paragraph breaks"""
+
+    # First try splitting by actual paragraph breaks
     chunks = re.split(r'\n\n|\r\n\r\n', text)
-    
-    paragraphs = []
-    for chunk in chunks:
-        chunk = chunk.strip()
-        # Only keep chunks that are long enough to generate questions from
-        if len(chunk) >= min_length:
-            paragraphs.append(chunk)
-    
+    chunks = [c.strip() for c in chunks if c.strip()]
+
+    # If we only got 1-2 chunks but the text is long, split by sentences instead
+    total_words = len(text.split())
+    if len(chunks) <= 2 and total_words > 300:
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+        chunks = []
+        current_chunk = ""
+
+        for sentence in sentences:
+            if len((current_chunk + " " + sentence).split()) <= max_length // 5:
+                current_chunk += " " + sentence
+            else:
+                if current_chunk.strip():
+                    chunks.append(current_chunk.strip())
+                current_chunk = sentence
+
+        if current_chunk.strip():
+            chunks.append(current_chunk.strip())
+
+    # Filter out chunks that are too short
+    paragraphs = [c for c in chunks if len(c) >= min_length]
+
     return paragraphs
 
 def classify_difficulty(paragraph: str) -> str:
     """Classify paragraph difficulty based on length and complexity"""
     words = paragraph.split()
     avg_word_length = sum(len(w) for w in words) / len(words) if words else 0
-    
+
     if len(words) < 50 and avg_word_length < 5:
         return "easy"
     elif len(words) < 100 and avg_word_length < 7:
@@ -65,14 +81,14 @@ def classify_difficulty(paragraph: str) -> str:
 
 def extract_text(file_path: str) -> dict:
     """Main function - extract and process text from any supported file"""
-    
+
     # Check file exists
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
-    
+
     # Get file extension
     ext = os.path.splitext(file_path)[1].lower()
-    
+
     # Extract based on file type
     if ext == ".pdf":
         raw_text = extract_from_pdf(file_path)
@@ -83,13 +99,13 @@ def extract_text(file_path: str) -> dict:
             raw_text = f.read()
     else:
         raise ValueError(f"Unsupported file type: {ext}. Use PDF, DOCX, or TXT")
-    
+
     # Clean the text
     cleaned = clean_text(raw_text)
-    
+
     # Split into paragraphs
     paragraphs = split_into_paragraphs(cleaned)
-    
+
     # Add difficulty to each paragraph
     result = []
     for i, para in enumerate(paragraphs):
@@ -99,7 +115,7 @@ def extract_text(file_path: str) -> dict:
             "difficulty": classify_difficulty(para),
             "word_count": len(para.split())
         })
-    
+
     return {
         "total_paragraphs": len(result),
         "paragraphs": result
