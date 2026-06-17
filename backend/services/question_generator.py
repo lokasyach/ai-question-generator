@@ -27,15 +27,17 @@ def generate_question(paragraph: str, difficulty: str = "medium") -> dict:
     question = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
     # Generate the answer using the same paragraph as context
-    answer_prompt = f"question: {question} context: {paragraph}"
+    answer_prompt = f"answer in detail with full sentences: {question} context: {paragraph}"
     answer_inputs = tokenizer(answer_prompt, return_tensors="pt", max_length=512, truncation=True)
 
     with torch.no_grad():
         answer_outputs = model.generate(
             **answer_inputs,
-            max_length=64,
+            max_length=200,
+            min_length=30,
             num_beams=4,
-            early_stopping=True
+            early_stopping=True,
+            no_repeat_ngram_size=3
         )
 
     answer = tokenizer.decode(answer_outputs[0], skip_special_tokens=True)
